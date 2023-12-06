@@ -1,0 +1,82 @@
+# Version 2: Here you manually enter XPath of each page. Change conditions of the code according to your requirements.
+
+
+from selenium import webdriver
+import requests
+import time
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from bs4 import BeautifulSoup
+import pandas as pd
+from selenium.webdriver.common.by import By
+import pyautogui
+from selenium.webdriver.support import expected_conditions as EC
+from openpyxl import load_workbook, Workbook
+
+
+options = webdriver.ChromeOptions()
+options.add_argument('--ignore-certificate-errors')
+options.add_argument("--test-type")
+options.binary_location = "/usr/bin/chromium"
+options = webdriver.ChromeOptions()
+options.add_experimental_option("detach", True)
+
+driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+
+driver.get("Enter your URL") # insert your url
+driver.maximize_window()
+wait = WebDriverWait(driver, 20)
+
+excel_file_path = r'C:insert your excel file path.xlsx'
+workbook = Workbook()
+workbook.save(excel_file_path)
+
+page_number = 0
+
+while page_number < 100:
+    try:
+        data_boxes = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'card-view')))
+
+        sheet_name = f'Data_{page_number + 1}'
+        sheet = workbook.create_sheet(title=sheet_name)
+
+        data = []
+
+        for box in data_boxes:
+            title = box.find_element(By.CLASS_NAME, 'title').find_element(By.TAG_NAME, 'span').text.strip()
+            value = box.find_element(By.CLASS_NAME, 'value').find_element(By.TAG_NAME, 'span').text.strip()
+            data.append([title, value])
+
+        duplicate_data = False
+        for row in sheet.iter_rows(min_row=1, max_row=sheet.max_row, min_col=1, max_col=2):
+            if [cell.value for cell in row] in data:
+                duplicate_data = True
+                print(f"Data on page {page_number + 1} is already collected. Skipping...")
+                break
+
+        if not duplicate_data:
+            for row in data:
+                sheet.append(row)
+
+            workbook.save(excel_file_path)
+
+            print(f"\nData has been successfully extracted and appended to '{excel_file_path}'.")
+
+        time.sleep(5)
+        driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+
+        next_page_xpath = input(f"Enter XPath for page {page_number + 2}: ")
+        element = wait.until(EC.presence_of_element_located((By.XPATH, next_page_xpath)))
+        element.click()
+        time.sleep(5)
+        page_number += 1
+
+        print("Loop end")
+
+    except Exception as e:
+        print(f"\nError during Excel file update: {e}")
+        break
+
+print("Done")
+driver.quit()
