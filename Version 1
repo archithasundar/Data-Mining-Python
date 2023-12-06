@@ -1,0 +1,98 @@
+# Version 1 for the SEBI AIF Registered entities: The conditions here are designed for the XPaths of this page. Change according to your code.
+
+from selenium import webdriver
+import requests
+import time
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from bs4 import BeautifulSoup
+import pandas as pd
+from selenium.webdriver.common.by import By
+import pyautogui
+from selenium.webdriver.support import expected_conditions as EC
+from openpyxl import load_workbook, Workbook
+
+
+options = webdriver.ChromeOptions()
+options.add_argument('--ignore-certificate-errors')
+options.add_argument("--test-type")
+options.binary_location = "/usr/bin/chromium"
+options = webdriver.ChromeOptions()
+options.add_experimental_option("detach", True)
+
+driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+
+driver.get("https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16") # Change this URL
+driver.maximize_window()
+wait = WebDriverWait(driver, 20)
+
+i=7
+next=0
+next_button_xpath = '/html/body/form/div[4]/div/div[2]/section/div[3]/div[27]/div[2]/ul/li['+str(i)+']/a'  # Replace with the correct XPath of your "Next" button
+page_two='/html/body/form/div[4]/div/div[2]/section/div[3]/div[27]/div[2]/ul/li[10]/a'
+next_button = driver.find_element(By.XPATH, next_button_xpath)
+time.sleep(3)
+driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+
+excel_file_path = r'C:paste the excel file path here.xlsx'
+workbook = Workbook()
+workbook.save(excel_file_path)
+
+page_number = 0
+
+while next<100:
+    try:
+        url = "paste your url here"
+
+        response = requests.get(url)
+        time.sleep(3)
+        if response.status_code == 200:
+            data_boxes = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'card-view')))
+
+            sheet_name = f'Data_{page_number + 1}'
+            sheet = workbook.create_sheet(title=sheet_name)
+
+            data = []
+
+            for box in data_boxes:
+                title = box.find_element(By.CLASS_NAME, 'title').find_element(By.TAG_NAME, 'span').text.strip()
+                value = box.find_element(By.CLASS_NAME, 'value').find_element(By.TAG_NAME, 'span').text.strip()
+                data.append([title, value])
+            duplicate_data = False
+            for row in sheet.iter_rows(min_row=1, max_row=sheet.max_row, min_col=1, max_col=2):
+                if [cell.value for cell in row] in data:
+                   duplicate_data = True
+                   print(f"Data on page {page_number + 1} is already collected. Skipping...")
+                   break
+
+            if not duplicate_data:
+               for row in data:
+                   sheet.append(row)
+
+               workbook.save(excel_file_path)
+               print(f"\nData has been successfully extracted and saved to '{excel_file_path}'.")
+               time.sleep(5)
+               driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+               button_xpath = '/html/body/form/div[4]/div/div[2]/section/div[3]/div[27]/div[2]/ul/li[' + str(
+                i) + ']/a'  # Replace with your correct XPath 
+               element = wait.until(EC.presence_of_element_located((By.XPATH, button_xpath)))
+               element.click()
+               next = next + 1
+               if next == 1:  # change conditions based on the sequence of X-path of that page
+                  i = i + 3
+               elif next < 6:
+                  i = i + 1
+               elif next > 44:
+                   i=i-1
+               else:
+                i=14
+               print("Loop end")
+ 
+    except Exception as e:
+            print(f"\nError during Excel file creation: {e}")
+
+
+print("Done")
+
+# driver.quit()
