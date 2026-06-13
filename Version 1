@@ -1,98 +1,147 @@
-# Version 1: The conditions here are designed for the XPaths of this page. Change according to your code.
-
 from selenium import webdriver
 import requests
 import time
+
 from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
-from bs4 import BeautifulSoup
-import pandas as pd
-from selenium.webdriver.common.by import By
-import pyautogui
 from selenium.webdriver.support import expected_conditions as EC
-from openpyxl import load_workbook, Workbook
+from selenium.webdriver.common.by import By
+
+from webdriver_manager.chrome import ChromeDriverManager
+from openpyxl import Workbook
 
 
-options = webdriver.ChromeOptions()
-options.add_argument('--ignore-certificate-errors')
+# Chrome Setup
+options = Options()
+options.add_argument("--ignore-certificate-errors")
 options.add_argument("--test-type")
-options.binary_location = "/usr/bin/chromium"
-options = webdriver.ChromeOptions()
 options.add_experimental_option("detach", True)
 
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+driver = webdriver.Chrome(
+    service=ChromeService(ChromeDriverManager().install()),
+    options=options
+)
 
-driver.get("Enter your URL") # Change this URL
+
+# Open Website
+driver.get("Enter your URL")
 driver.maximize_window()
+
 wait = WebDriverWait(driver, 20)
 
-i=7
-next=0
-next_button_xpath = 'Enter your XPath['+str(i)+']/a'  # Replace with the correct XPath of your "Next" button
-page_two='Enter your XPath'
-next_button = driver.find_element(By.XPATH, next_button_xpath)
-time.sleep(3)
-driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
 
-excel_file_path = r'C:paste the excel file path here.xlsx'
+# Excel Setup
+excel_file_path = r"Enter Excel file path.xlsx"
+
 workbook = Workbook()
 workbook.save(excel_file_path)
 
-page_number = 0
 
-while next<100:
+page_number = 0
+page_count = 0
+
+xpath_index = 7
+
+next_button_xpath = f"Enter your XPath[{xpath_index}]/a"
+
+
+while page_count < 100:
+
     try:
-        url = "paste your url here"
+
+        url = "Enter your URL"
 
         response = requests.get(url)
-        time.sleep(3)
-        if response.status_code == 200:
-            data_boxes = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'card-view')))
 
-            sheet_name = f'Data_{page_number + 1}'
+        if response.status_code == 200:
+
+            data_boxes = wait.until(
+                EC.presence_of_all_elements_located(
+                    (By.CLASS_NAME, "card-view")
+                )
+            )
+
+
+            sheet_name = f"Data_{page_number + 1}"
             sheet = workbook.create_sheet(title=sheet_name)
 
-            data = []
+            extracted_data = []
+
 
             for box in data_boxes:
-                title = box.find_element(By.CLASS_NAME, 'title').find_element(By.TAG_NAME, 'span').text.strip()
-                value = box.find_element(By.CLASS_NAME, 'value').find_element(By.TAG_NAME, 'span').text.strip()
-                data.append([title, value])
-            duplicate_data = False
-            for row in sheet.iter_rows(min_row=1, max_row=sheet.max_row, min_col=1, max_col=2):
-                if [cell.value for cell in row] in data:
-                   duplicate_data = True
-                   print(f"Data on page {page_number + 1} is already collected. Skipping...")
-                   break
 
-            if not duplicate_data:
-               for row in data:
-                   sheet.append(row)
+                title = (
+                    box.find_element(By.CLASS_NAME, "title")
+                    .find_element(By.TAG_NAME, "span")
+                    .text.strip()
+                )
 
-               workbook.save(excel_file_path)
-               print(f"\nData has been successfully extracted and saved to '{excel_file_path}'.")
-               time.sleep(5)
-               driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-               button_xpath = 'Enter your XPath[' + str(
-                i) + ']/a'  # Replace with your correct XPath 
-               element = wait.until(EC.presence_of_element_located((By.XPATH, button_xpath)))
-               element.click()
-               next = next + 1
-               if next == 1:  # change conditions based on the sequence of X-path of that page
-                  i = i + 3
-               elif next < 6:
-                  i = i + 1
-               elif next > 44:
-                   i=i-1
-               else:
-                i=14
-               print("Loop end")
- 
-    except Exception as e:
-            print(f"\nError during Excel file creation: {e}")
+                value = (
+                    box.find_element(By.CLASS_NAME, "value")
+                    .find_element(By.TAG_NAME, "span")
+                    .text.strip()
+                )
+
+                extracted_data.append([title, value])
 
 
-print("Done")
+            for row in extracted_data:
+                sheet.append(row)
 
-# driver.quit()
+
+            workbook.save(excel_file_path)
+
+            print(
+                f"Data extracted successfully from page {page_number + 1}"
+            )
+
+
+            driver.execute_script(
+                "window.scrollTo(0, document.body.scrollHeight)"
+            )
+
+
+            button_xpath = f"Enter your XPath[{xpath_index}]/a"
+
+            next_button = wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, button_xpath)
+                )
+            )
+
+
+            next_button.click()
+
+
+            page_count += 1
+            page_number += 1
+
+
+            # Adjust according to website pagination structure
+            if page_count == 1:
+                xpath_index += 3
+
+            elif page_count < 6:
+                xpath_index += 1
+
+            elif page_count > 44:
+                xpath_index -= 1
+
+            else:
+                xpath_index = 14
+
+
+            time.sleep(5)
+
+
+    except Exception as error:
+
+        print(
+            f"Error during extraction: {error}"
+        )
+
+
+print("Scraping Completed")
+
+driver.quit()
