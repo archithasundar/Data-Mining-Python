@@ -15,8 +15,8 @@ Version 2: Manual XPath input for navigating pages dynamically
 3. Handles multi-page navigation through pagination
 4. Extracts structured information from HTML elements
 5. Stores scraped data into Excel worksheets
-Uses explicit waits for reliable element loading
-Automates repetitive web data collection tasks
+6. Uses explicit waits for reliable element loading
+7. Automates repetitive web data collection tasks
 
 **Technologies Used:**
 1. Python
@@ -32,13 +32,6 @@ Automates repetitive web data collection tasks
 4. webdriver-manager
 
 **Project Structure:**
-
-Web-Scraping-Automation:
-
-│── version_1.py
-│── version_2.py
-│── README.md
-│── output.xlsx
 
 **How It Works:**
 1. Launches Chrome browser using Selenium WebDriver
